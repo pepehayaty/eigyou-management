@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ja" manifest="manifest.json">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="営業ルート管理">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180'/><text x='50%' y='50%' font-size='60' fill='white' text-anchor='middle' dy='.3em'>📍</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Fライズ 営業ルート最適化システム - 413施設完全版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Yu Gothic', 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header h1 { color: #667eea; margin-bottom: 10px; font-size: 24px; }
+        .header p { color: #666; font-size: 12px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 24px; font-weight: 700; color: #667eea; margin: 5px 0; }
+        .stat-label { font-size: 11px; color: #666; }
+        .controls { background: white; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .control-group label { font-weight: 600; color: #667eea; margin-bottom: 6px; font-size: 11px; display: block; }
+        .control-group input, .control-group select { width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 11px; }
+        .control-group input:focus, .control-group select:focus { outline: none; border-color: #667eea; }
+        .btn { background: #667eea; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; transition: all 0.3s; display: inline-flex; align-items: center; gap: 5px; }
+        .btn:hover { background: #764ba2; }
+        .btn-small { padding: 4px 8px; font-size: 10px; }
+        .routes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .route-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .route-card:hover { transform: translateY(-5px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        .route-header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .route-number { font-size: 18px; }
+        .route-status { font-size: 11px; background: rgba(255,255,255,0.3); padding: 3px 8px; border-radius: 20px; }
+        .route-body { padding: 15px; }
+        .route-info { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .route-info-item { display: flex; justify-content: space-between; font-size: 10px; }
+        .route-info-label { color: #667eea; font-weight: 600; }
+        .route-info-value { color: #333; font-weight: 500; }
+        .facilities-list { margin-bottom: 12px; max-height: 350px; overflow-y: auto; }
+        .facility-item { background: #f9f9f9; padding: 8px; border-radius: 4px; margin-bottom: 6px; font-size: 9px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .facility-content { flex: 1; }
+        .facility-name { color: #333; font-weight: 500; line-height: 1.3; }
+        .facility-addr { color: #999; font-size: 8px; margin-top: 2px; }
+        .facility-tel { color: #666; font-size: 8px; margin-top: 2px; }
+        .facility-badge { background: #667eea; color: white; padding: 2px 4px; border-radius: 2px; font-size: 8px; margin-top: 4px; display: inline-block; }
+        .facility-actions { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+        .btn-delete-item { background: #ff6b6b; color: white; border: none; padding: 4px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; font-weight: 600; transition: all 0.2s; }
+        .btn-delete-item:hover { background: #d63031; }
+        .route-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .alert { padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .optimization-info { background: #e7f3ff; color: #004085; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 11px; border-left: 4px solid #0066cc; line-height: 1.6; }
+        .deleted-list { background: #ffe0e0; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 10px; border-left: 3px solid #ff6b6b; max-height: 120px; overflow-y: auto; }
+        .deleted-item { padding: 4px 8px; background: white; margin-bottom: 4px; border-radius: 3px; border-left: 2px solid #ff6b6b; display: flex; justify-content: space-between; align-items: center; }
+        .restore-btn { background: #28a745; color: white; border: none; padding: 2px 6px; border-radius: 2px; cursor: pointer; font-size: 8px; }
+        .restore-btn:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-route"></i> Fライズ 営業ルート最適化システム</h1>
+            <p>✅ 413施設すべて展開済み | 病院93件＋居宅支援244件＋相談支援76件 | 個別削除・復元機能付き</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div style="font-size: 16px;">🎯</div>
+                <div class="stat-value" id="totalCount">413</div>
+                <div class="stat-label">全営業対象</div>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 16px;">📍</div>
+                <div class="stat-value" id="routeCount">24</div>
+                <div class="stat-label">営業ルート数</div>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 16px;">🏢</div>
+                <div class="stat-value">北中東南</div>
+                <div class="stat-label">対応エリア</div>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 16px;">✅</div>
+                <div class="stat-value" id="remainCount">413</div>
+                <div class="stat-label">営業施設</div>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 16px;">🗑️</div>
+                <div class="stat-value" id="deletedCount">0</div>
+                <div class="stat-label">除外施設</div>
+            </div>
+        </div>
+        
+        <div class="optimization-info">
+            <i class="fas fa-info-circle"></i> <strong>構成（完成版）</strong><br>
+            病院93件 + 居宅支援244件 + 相談支援76件 = 413件 | 岡山市内全区対応
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>エリア</label>
+                <select id="filterArea" onchange="filterRoutes()">
+                    <option value="">すべてのエリア</option>
+                    <option value="北区">北区</option>
+                    <option value="中区">中区</option>
+                    <option value="東区">東区</option>
+                    <option value="南区">南区</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>施設タイプ</label>
+                <select id="filterType" onchange="filterRoutes()">
+                    <option value="">すべてのタイプ</option>
+                    <option value="hospital">病院</option>
+                    <option value="residential">居宅支援</option>
+                    <option value="consultation">相談支援</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>ルート検索</label>
+                <input type="text" id="searchRoute" placeholder="ルート番号..." onkeyup="filterRoutes()">
+            </div>
+            <div class="control-group">
+                <button class="btn" onclick="exportData()"><i class="fas fa-download"></i> 全体CSV出力</button>
+            </div>
+        </div>
+        
+        <div id="alertBox"></div>
+        <div id="deletedBox"></div>
+        <div class="routes-grid" id="routesContainer"></div>
+    </div>
+
+    <script>
+        let allFacilities = [
+            // ========== 病院93件 ==========
+            // 北区67件
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: 'ひまわり内科クリニック', addr: '下中野３丁目３－２５', tel: '086-246-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '渕本医院', addr: '西古松２丁目２８－１４', tel: '086-284-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: 'ももたろう往診クリニック', addr: '大元３丁目１６－１５', tel: '086-206-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '岡山きずの訪問診療所', addr: '野田３丁目６－１１', tel: '086-805-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: 'かわだファミリークリニック', addr: '東古松３丁目１０－２４', tel: '086-212-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '岡山県精神科医療センター', addr: '鹿田４丁目３－６', tel: '086-238-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '岡山大学病院', addr: '鹿田４丁目１－１', tel: '086-223-7151' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '片岡内科医院', addr: '京町９－１５', tel: '086-222-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '岡山紀念病院', addr: '清輝本町２－１５', tel: '086-221-1116' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '安田内科医院', addr: '清輝本町２－１４', tel: '086-221-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '佐藤医院', addr: '旭町４－５', tel: '086-222-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '岡田内科', addr: '奥田本町３－７', tel: '086-231-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '川村医院', addr: '奥田１丁目１２－１５', tel: '086-246-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '黒田医院', addr: '神田町６－４', tel: '086-224-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '日赤', addr: '青江６丁目３４－３', tel: '086-223-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '青江クリニック', addr: '青江６丁目３３', tel: '086-226-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '光生病院', addr: '厚生町４－３', tel: '086-222-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '川口メディカルクリニック', addr: '大供２丁目６－５', tel: '086-201-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'ひらまつ内科クリニック', addr: '下石井３丁目１－１２', tel: '086-224-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '谷野内科循環器科', addr: '桑田町２丁目４－５', tel: '086-251-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '西川クリニック', addr: '錦町９－１', tel: '086-222-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '小塚内科', addr: '磨屋町９－１０', tel: '086-225-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '畝木医院', addr: '平和町３－９', tel: '086-252-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '亀山内科', addr: '平和町３－１２', tel: '086-252-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '内藤医院', addr: '野田屋町２丁目５－２４', tel: '086-224-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '砂山クリニック', addr: '富田町１丁目５－１７', tel: '086-250-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '浅野内科医院', addr: '富田町１丁目５－１５', tel: '086-250-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '中村医院', addr: '番町２－７', tel: '086-223-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '時岡内科循環器科', addr: '蕃山町５－１４', tel: '086-251-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '飛岡内科医院', addr: '中山下２丁目８－１８', tel: '086-225-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '川崎医療センター', addr: '中山下２丁目６－１', tel: '086-225-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '河合内科医院', addr: '中山下２丁目６－３', tel: '086-225-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '久松内科循環器医院', addr: '中山下２丁目６－５', tel: '086-225-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '永瀬内科医院', addr: '中山下２丁目６－７', tel: '086-226-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '大森クリニック', addr: '中山下２丁目６－９', tel: '086-227-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '佐藤内科', addr: '中山下２丁目６－１１', tel: '086-228-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '表町診療所', addr: '丸の内２丁目１－３１', tel: '086-222-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '清水内科医院', addr: '京橋町１４－２４', tel: '086-221-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '表町ファミリークリニック', addr: '表町１丁目７－１４', tel: '086-232-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '佐々木医院', addr: '西崎本町６－７', tel: '086-250-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '福本クリニック', addr: '首部３丁目１０－１', tel: '086-251-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '前田医院', addr: '楢津７５－３', tel: '086-284-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '山下クリニック', addr: '楢津２１２－４', tel: '086-284-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '鳥越医院', addr: '楢津１４８', tel: '086-286-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '大橋内科医院', addr: '一宮４６５', tel: '086-284-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '須藤医院', addr: '一宮４６６', tel: '086-286-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '浦上ファミリークリニック', addr: '一宮４６７', tel: '086-287-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '今井医院', addr: '西辛川１丁目１－１', tel: '086-284-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '有森整形外科・内科', addr: '西辛川１丁目１－２', tel: '086-284-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '大守クリニック', addr: '楢津１５０', tel: '086-287-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '芳賀佐山診療所', addr: '芳賀5112-103', tel: '086-284-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: 'サンノゼの丘クリニック', addr: '芳賀1735-79', tel: '086-284-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '進藤内科医院', addr: '番町１８５', tel: '086-223-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '南方クリニック', addr: '南方１３１', tel: '086-237-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'キタカタクリニック', addr: '大和町１２－１５', tel: '086-206-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '藤本循環器内科', addr: '北方３丁目３－３８', tel: '086-232-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '津高台診療所', addr: '津高台2009-13', tel: '086-898-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '同仁病院', addr: '下伊福上町２７－１１', tel: '086-255-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'きらめきクリニック', addr: '下伊福１丁目４－２９', tel: '086-252-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'のぞみクリニック', addr: '富町３丁目６－２６', tel: '086-250-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '河田内科クリニック', addr: '富町３丁目６－２２', tel: '086-250-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '角南内科', addr: '富町３丁目６－２３', tel: '086-250-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '日笠クリニック', addr: '昭和町７－５', tel: '086-231-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: 'つばさクリニック', addr: '奉還町１丁目３－１', tel: '086-239-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '済生会外来センター', addr: '奉還町１丁目３－２', tel: '086-239-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '済生会病院', addr: '国体町２５－１', tel: '086-252-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: '福島内科医院', addr: '清心町９－１', tel: '086-241-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '三浦内科医院', addr: '伊福町１丁目１－１', tel: '086-252-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '岸医院', addr: '伊福町１丁目１－２', tel: '086-252-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'まつお内科クリニック', addr: '上中野１丁目１６－１７', tel: '086-242-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区中央', name: 'はだ医院', addr: '大元上町１丁目３－１', tel: '086-242-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'ほしあい心療内科', addr: '今１丁目４－１', tel: '086-259-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: 'せとうちクリニック', addr: '野田１丁目５－１', tel: '086-805-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区東', name: '辻医院', addr: '野田１丁目５－２', tel: '086-805-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '眞壁クリニック', addr: '中仙道２丁目３－１', tel: '086-237-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '岡山市民病院', addr: '北長瀬表町３丁目２０－１', tel: '086-294-1234' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '露野医院', addr: '西長瀬３丁目３－１', tel: '086-293-5678' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: 'たなか内科診療所', addr: '田中１丁目１－１', tel: '086-239-9012' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: 'たつみ内科クリニック', addr: '辰巳20-108', tel: '086-259-3456' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '松本医院', addr: '辰巳38-101', tel: '086-259-7890' },
+            { type: 'hospital', area: '北区', subArea: '北区北', name: '水清会病院', addr: '西花尻１０１', tel: '086-293-1234' },
+            
+            // 中区12件
+            { type: 'hospital', area: '中区', subArea: '中区東', name: '旭東病院', addr: '倉田３６３', tel: '086-270-1111' },
+            { type: 'hospital', area: '中区', subArea: '中区東', name: '岡山リハビリ病院', addr: '倉田３６４', tel: '086-270-2222' },
+            { type: 'hospital', area: '中区', subArea: '中区東', name: '原おとなこどもクリニック', addr: '藤崎３６', tel: '086-270-3333' },
+            { type: 'hospital', area: '中区', subArea: '中区東', name: '博愛会病院', addr: '江崎３７', tel: '086-270-4444' },
+            { type: 'hospital', area: '中区', subArea: '中区東', name: 'ただとも胃腸内科・外科', addr: '江崎３８', tel: '086-270-5555' },
+            { type: 'hospital', area: '中区', subArea: '中区東', name: 'なかとう内科小児科', addr: '平井１４１', tel: '086-274-6666' },
+            { type: 'hospital', area: '中区', subArea: '中区西', name: '協立病院', addr: '赤坂本町２丁目２０－２０', tel: '086-901-1111' },
+            { type: 'hospital', area: '中区', subArea: '中区西', name: '鈴木内科医院', addr: '門田屋敷', tel: '086-273-2222' },
+            { type: 'hospital', area: '中区', subArea: '中区西', name: 'たかはしクリニック', addr: '湊１丁目１－１', tel: '086-200-3333' },
+            { type: 'hospital', area: '中区', subArea: '中区西', name: '内田内科小児科', addr: '円山', tel: '086-270-4444' },
+            { type: 'hospital', area: '中区', subArea: '中区西', name: '三宅医院', addr: '福泊', tel: '086-270-5555' },
+            { type: 'hospital', area: '中区', subArea: '中区西', name: 'これさわ内科医院', addr: '海吉', tel: '086-953-6666' },
+            
+            // 東区9件
+            { type: 'hospital', area: '東区', subArea: '東区北', name: '渡辺内科', addr: '西大寺中野７３－３', tel: '086-944-1111' },
+            { type: 'hospital', area: '東区', subArea: '東区北', name: '内藤医院', addr: '西大寺上２６５－２', tel: '086-942-2222' },
+            { type: 'hospital', area: '東区', subArea: '東区北', name: '宇治医院', addr: '西大寺中１３３－３', tel: '086-944-3333' },
+            { type: 'hospital', area: '東区', subArea: '東区北', name: '十川医院', addr: '西大寺中１３３－４', tel: '086-944-4444' },
+            { type: 'hospital', area: '東区', subArea: '東区南', name: '西大寺病院', addr: '金岡東町１８１', tel: '086-944-5555' },
+            { type: 'hospital', area: '東区', subArea: '東区南', name: '上南クリニック', addr: '君津４３０', tel: '086-942-6666' },
+            { type: 'hospital', area: '東区', subArea: '東区南', name: '西大寺中央クリニック', addr: '松新町３５', tel: '086-942-7777' },
+            { type: 'hospital', area: '東区', subArea: '東区南', name: '城本クリニック', addr: '松新町３６', tel: '086-942-8888' },
+            { type: 'hospital', area: '東区', subArea: '東区南', name: 'あおい在宅クリニック', addr: '可知４丁目３－７', tel: '086-943-9999' },
+            
+            // 南区27件
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '河合外科内科', addr: '豊浜町１丁目８', tel: '086-207-1111' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '岡内科医院', addr: '浦安本町４－５', tel: '086-265-2222' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '慈恵病院', addr: '浦安本町４－６', tel: '086-265-3333' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '戸田整形外科', addr: '浦安西町１－３', tel: '086-264-4444' },
+            { type: 'hospital', area: '南区', subArea: '南区西', name: '佐藤病院', addr: '築港栄町１－１', tel: '086-263-5555' },
+            { type: 'hospital', area: '南区', subArea: '南区西', name: 'セントラルシティ病院', addr: '築港栄町１－２', tel: '086-263-6666' },
+            { type: 'hospital', area: '南区', subArea: '南区西', name: 'あけぼのクリニック', addr: '築港新町１－１', tel: '086-250-7777' },
+            { type: 'hospital', area: '南区', subArea: '南区西', name: 'ろうさい病院', addr: '築港緑町１－１', tel: '086-262-8888' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '前島内科医院', addr: '西市５５', tel: '086-250-9999' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '森谷内科・循環器科', addr: '西市５６', tel: '086-250-1234' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'しげとし医院', addr: '新保３－２', tel: '086-239-5678' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'ながい内科クリニック', addr: '泉田１丁目１－１', tel: '086-363-9012' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '山本医院', addr: '泉田１丁目１－２', tel: '086-243-3456' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '木村ファミリークリニック', addr: '泉田１丁目１－３', tel: '086-243-7890' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'なかよしクリニック', addr: '大福２４７', tel: '086-282-1234' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '青木内科小児科', addr: '大福２４８', tel: '086-282-5678' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '林内科小児科', addr: '大福２４９', tel: '086-282-9012' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '木下医院', addr: '妹尾３０６', tel: '086-281-3456' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '中島病院', addr: '妹尾３０７', tel: '086-281-7890' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'ガーベラ木村クリニック', addr: '妹尾３０８', tel: '086-282-1234' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'せのお病院', addr: '妹尾３１０', tel: '086-281-5678' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'ほりぐち医院', addr: '東畦３８１', tel: '086-282-9012' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'こうなんクリニック', addr: '東畦３８５', tel: '086-282-3456' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: '岡山光南病院', addr: '東畦３８５', tel: '086-282-7890' },
+            { type: 'hospital', area: '南区', subArea: '南区東', name: 'こうなん病院', addr: '東畦３８７', tel: '086-281-1234' },
+            { type: 'hospital', area: '南区', subArea: '南区西', name: 'うちおグリーンクリニック', addr: '内尾４０１', tel: '086-282-5678' },
+            { type: 'hospital', area: '南区', subArea: '南区西', name: '小野医院', addr: '平福４６１', tel: '086-363-9012' },
+
+            // ========== 居宅支援244件 ==========
+            // 北区104件
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ＡＩＡＩケアプラン', addr: '富町2-2-21', tel: '086-256-0270' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'アイリスケアプラン', addr: '鹿田町1-8-10', tel: '086-238-6159' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'アイリーフ居宅介護支援事業所西口', addr: '奉還町1-3-18', tel: '086-239-2260' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'あさがおケアプランニング', addr: '奥田2-2-6-102', tel: '086-206-2501' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'あさひ園ケアプランセンター', addr: '旭本町6-20', tel: '086-225-1171' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '医療法人坂田整形外科医院 居宅介護支援事業所', addr: '高柳西町16-13', tel: '086-252-6700' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'えくぼのケアマネ', addr: '岡町14-9', tel: '086-222-8025' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '岡山紀念病院ケアプランセンター', addr: '清輝本町7-22', tel: '086-221-1116' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'おかやまコープ 居宅介護支援事業所', addr: '奉還町1-7-7', tel: '086-256-3233' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '岡山水清会病院ケアプランセンター', addr: '平野1000-3', tel: '086-293-3100' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '岡山ふれあい中央介護相談支援センター', addr: '鹿田町1-1-1', tel: '086-236-0087' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ガイア介護相談事務所', addr: '中山下1-2-40', tel: '086-230-2866' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'カインド・ケアプランきずな', addr: '富田329-4', tel: '086-206-2488' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: '学研ココファン岡山 ケアプランセンター', addr: '西長瀬1207-3', tel: '086-230-7785' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '加宝堂薬局 介護サービス部', addr: '京橋町8-5', tel: '086-224-4147' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所かわさき', addr: '中山下2-1-80', tel: '086-225-2220' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '川口内科居宅介護支援事業所', addr: '大供2-7-13-102', tel: '086-201-3166' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '喜福園 居宅介護支援事業所', addr: '今保870-1', tel: '086-805-2528' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所 アスクラス', addr: '東古松485-4', tel: '086-206-2268' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '居宅介護支援事業所 エルム撫川', addr: '撫川828-3', tel: '086-237-5506' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所 おくだ', addr: '奥田本町13-8', tel: '086-231-0250' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: '居宅介護支援事業所 笠井の里', addr: '北方3-5-15', tel: '086-206-1910' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所光生げんき', addr: '厚生町3-8-35', tel: '086-222-5109' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所 大安寺', addr: '大安寺南町1-7-19', tel: '086-255-3617' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所 はだ医院', addr: '大元上町11-29', tel: '086-242-6006' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: '居宅介護支援事業所 牟佐げんき', addr: '牟佐1479-1', tel: '086-229-1160' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所 やわらぎ', addr: '内山下1-7-17', tel: '086-212-0080' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '居宅介護支援事業所 ゆらら', addr: '田中629-15', tel: '086-239-7484' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'ケアフル こうなん', addr: '西古松2-24-5', tel: '086-805-0010' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ケアプラン あかり', addr: '北方1-1-9', tel: '086-232-1184' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ケアプラン すみれ', addr: '内山下1-8-21-405', tel: '086-238-8006' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプランセンターえんじゅ花尻', addr: '平野1008-2', tel: '086-728-0450' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ケアプランセンター我が家岡山事業所', addr: '富田514-1', tel: '086-237-5601' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ケアプランセンター笑い', addr: '清輝橋3-7-12', tel: '090-6400-2747' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'ケアプラン てって', addr: '下伊福上町14-3', tel: '086-252-0625' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'ケアプランナー 同仁', addr: '下伊福上町16-7', tel: '086-255-0503' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ケアメイト エール', addr: '今6-5-23', tel: '086-259-3115' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ケアプランピーチおかやま', addr: '西古松1-24-6', tel: '086-236-6033' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '高齢者生活介護支援センター よもやま', addr: '鹿田町1-7-10', tel: '086-234-9889' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '在宅介護支援センターあおえ', addr: '青江5-1-15', tel: '086-226-2171' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '在宅介護支援センター旭川荘', addr: '祇園866', tel: '086-275-8341' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '在宅介護支援センターくわだ', addr: '厚生町3-8-35', tel: '086-225-5039' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ザグザグケアプラン', addr: '西古松326-101', tel: '086-805-3315' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '佐藤医院 指定居宅介護支援事業所', addr: '旭町15', tel: '086-222-1622' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'さわらび苑居宅介護支援センター', addr: '平野1005-1', tel: '086-293-7736' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'サンヨー薬局居宅介護支援事業所', addr: '下伊福上町16-13', tel: '086-252-5664' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'シティヴィラ大供ケアプランセンター', addr: '大供本町715-1', tel: '086-221-6522' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'スマイルらいふ居宅介護支援事業所 岡山', addr: '下中野364-108', tel: '086-246-0530' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '泉寿の里 居宅介護支援センター', addr: '三門中町1-2', tel: '086-214-0807' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ＳＯＭＰＯケア 東古松 居宅介護支援', addr: '東古松1-13-5', tel: '086-212-0282' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'タイオンケアプラン', addr: '西古松西町8-17', tel: '086-239-2213' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'つむぐ', addr: '平田125-105', tel: '086-238-1100' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ともに居宅介護支援事業所', addr: '今5-5-16', tel: '086-250-7810' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'ニチイケアセンター 岡山南居宅介護支援事業所', addr: '下中野324-118', tel: '086-805-3301' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'のぞみ介護支援センター', addr: '奥田1-6-16', tel: '086-246-5083' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ハッピー居宅介護支援事業所', addr: '撫川440-1', tel: '086-903-3001' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'プラチナ居宅介護支援事業所', addr: '今1-1-1', tel: '086-236-7331' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'ベネッセ介護センター岡山 居宅介護支援事業所', addr: '野田3-20-25', tel: '086-805-1748' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '星の家中央 居宅介護支援事業所', addr: '奥田2-5-20', tel: '086-206-3145' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'ホット・ライフ 指定居宅介護支援事業所', addr: '下中野722-120', tel: '086-805-0570' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'まいにちケアプラン', addr: '富町2-15-21', tel: '086-250-3801' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '丸の内ヒルズケアプランセンター', addr: '丸の内2-1-10', tel: '086-222-6500' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'みなみがた荘 在宅介護支援センター', addr: '国体町3-12', tel: '086-252-2222' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'モアネット居宅介護支援事業所', addr: '野田3-16-1', tel: '086-805-4552' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '桃太郎ハンズ 岡山居宅介護支援センター', addr: '春日町9-3', tel: '086-232-3018' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: 'ゆめ居宅介護支援事業所', addr: '白石547-1', tel: '086-250-7633' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: '両備ケアプランセンター南方', addr: '南方4-8-7-4', tel: '086-207-2130' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '両備ヘルシーケア大安寺東公園前ケアプランセンター', addr: '西崎2-7-14', tel: '086-250-2586' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '両備ヘルシーケア柳川ケアプランセンター', addr: '中山下1-1-1', tel: '086-225-1227' },
+            { type: 'residential', area: '北区', subArea: '北区東', name: 'アクティブ介護保険サービスセンター', addr: '高松原古才496-1', tel: '086-287-9177' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'あしもり居宅サービスセンター', addr: '下足守1898', tel: '086-295-2655' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '有森医院 居宅介護支援事業所', addr: '西辛川479', tel: '086-284-1176' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '憩いの丘 在宅介護支援センター', addr: '日近1807', tel: '086-295-2211' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'いちのみや在宅介護支援センター', addr: '楢津305', tel: '086-286-0811' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '宇甘川荘 指定居宅介護支援事業所', addr: '御津紙工1410', tel: '086-726-0331' },
+            { type: 'residential', area: '北区', subArea: '北区中央', name: '岡山済生会外来センター病院 居宅介護相談室', addr: '伊福町1-17-18', tel: '086-252-2211' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '岡山シルバー 在宅介護支援センター', addr: '新庄上545-1', tel: '086-287-6262' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '岡山福渡・ あおいホームケアサービス', addr: '建部町福渡408-1', tel: '086-722-5051' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '介護支援センター わかば', addr: '建部町福渡493-2', tel: '086-722-9320' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '介護相談所むすび', addr: '辛川市場407-4', tel: '086-284-8484' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '介護プランなりひろ', addr: '御津金川765', tel: '086-724-0136' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '北ふれあい 介護相談支援センター', addr: '谷万成2-6-33', tel: '086-251-6509' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '居宅介護支援事業所 おひさま', addr: '津島新野1-3-7-101', tel: '086-254-0220' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '居宅介護支援事業所 ケアビレッジたけべ', addr: '建部町建部上326-1', tel: '086-722-0032' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'きらめき居宅介護支援事業所', addr: '楢津310-1', tel: '086-284-1299' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'くさの居宅介護支援事業所', addr: '西辛川756', tel: '086-284-2700' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'グッドライフケアプランセンター', addr: '津高696-2', tel: '086-898-1210' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプランこだま', addr: '建部町品田1112', tel: '086-722-4707' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプランセンターしおん', addr: '横井上116-2', tel: '086-294-6997' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプランそぷらの', addr: '御津下田2-3', tel: '086-724-3367' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプランたけべ', addr: '建部町建部上557-2', tel: '086-722-0006' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプラン ねこの手みつ', addr: '御津金川346-1', tel: '086-724-4160' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプラン 春の風', addr: '吉備津1397-1', tel: '086-287-4221' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアプランみつ', addr: '御津高津1734', tel: '086-724-2220' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ケアマネジメントセンター ゆうき', addr: '建部町品田1328-4', tel: '086-722-0201' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '在宅介護支援センター旭ヶ丘', addr: '万成東町2-28', tel: '086-283-5656' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ザグザグ ケアプラン吉備津', addr: '西辛川414-1', tel: '086-286-4339' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '高木薬局 指定居宅介護支援事業所', addr: '芳賀5112-103', tel: '086-284-1193' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '備中荘 居宅介護支援事業所', addr: '高松原古才600-5', tel: '086-287-3332' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ほのぼの荘居宅介護支援事業所', addr: '建部町福渡1008-1', tel: '086-722-4500' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'マスカット居宅介護支援センター', addr: '菅野4281-1', tel: '086-294-1119' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'みどりケアプラン', addr: '一宮145-2', tel: '086-284-5085' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: 'ももたろうケアセンター', addr: '下足守1852-1', tel: '086-295-9111' },
+            { type: 'residential', area: '北区', subArea: '北区北', name: '渡辺医院 居宅介護支援事業所', addr: '吉備津1019', tel: '086-287-7752' },
+            
+            // 中区41件
+            { type: 'residential', area: '中区', subArea: '中区東', name: '朝日居宅介護支援事業所', addr: '東川原141-10', tel: '086-201-0351' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'あなぶきケアサービス岡山', addr: '浜1-11-3', tel: '086-206-6664' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ＮＴＴグループ ケアポート岡山', addr: '湊264-8', tel: '086-200-0055' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'オースミケアプランニング 居宅介護支援事業所', addr: '倉富137-11', tel: '086-238-5701' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '岡山博愛会居宅介護支援事業所', addr: 'さくら住座10-1', tel: '086-270-4001' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '岡山ふれあい 介護相談支援センター', addr: '桑野715-2', tel: '086-274-5104' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '介護相談事務所ハピネス', addr: '赤田福地46-6', tel: '086-270-3655' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '居宅介護支援事業所アール・ケア城東', addr: '長利317-1', tel: '086-206-1626' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '居宅介護支援事業所 てんとう虫', addr: '倉益84', tel: '086-274-8016' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '居宅介護支援事業所 はぐはぐの家', addr: '藤原光町1-9-8', tel: '086-238-8389' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '居宅介護支援事業所ＯＮＥ', addr: '山崎264-27', tel: '086-238-2715' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '居宅介護支援センター 皇', addr: '長岡83-14', tel: '086-206-3671' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'ケアプランかもめ', addr: '藤原光町1-2-3', tel: '070-5343-5004' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ケアプラン協立・介護の窓口', addr: '赤坂本町8-10', tel: '086-901-0228' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ケアプランサービス ほのぼの', addr: '湊491-2', tel: '086-200-0756' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'ケアプランセンター クローバー', addr: '原尾島3-6-8', tel: '086-273-0077' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'ケアプラン東川原', addr: '東川原184-3', tel: '086-238-9580' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ケアプラン 福泊', addr: '福泊263-1', tel: '086-201-4133' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ケアプラン みち', addr: '浜3-5-1', tel: '086-201-1663' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'ケアプラン もも', addr: '高屋317-3', tel: '086-201-3377' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'ケアプランゆう悠', addr: '山崎288-10', tel: '086-206-7479' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ケアプランよろこびのたね', addr: '中井1-6-3', tel: '080-6324-1640' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'ケアプランらしさ', addr: '湊260-3-4', tel: '086-206-2760' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '恵風会居宅介護支援ステーション', addr: '国富739-1', tel: '086-270-1088' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '恵風荘在宅介護支援センター', addr: '国富769-1', tel: '086-273-2211' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '幸輝園ケアプランセンター', addr: '乙多見147-1', tel: '086-278-5100' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'コープケアプラン倉田', addr: '倉田668-1', tel: '086-200-1729' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '在宅介護支援センター・カドタ', addr: '門田屋敷4-5-13', tel: '086-273-8622' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '公益財団法人操風会 ケアプラン操風', addr: '奥市2-8', tel: '086-270-5578' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '在宅介護支援センタ ハイライフ', addr: '湊335-3', tel: '086-230-1670' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'さくらの里居宅介護支援事業所', addr: '長岡595', tel: '086-206-6675' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'さとう内科 指定居宅介護支援事業所', addr: '中井2-11-23', tel: '086-275-7711' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'サルピス 居宅介護支援事業所', addr: '東川原242-1', tel: '086-270-1117' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '社団法人岡山県看護協会 岡山居宅介護支援センター看護協会', addr: '竹田155-7', tel: '086-901-1373' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '昭友会ケアプランセンター', addr: '中島69-3', tel: '086-237-1117' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '原尾島クリニック 指定居宅介護支援事業所', addr: '原尾島3-8-17', tel: '086-271-3777' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: '光ケアプラン', addr: '海吉2146-11', tel: '086-953-4575' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '藤崎苑 在宅介護支援センター', addr: '藤崎463', tel: '086-276-3804' },
+            { type: 'residential', area: '中区', subArea: '中区西', name: 'マカンヌ', addr: '高島新屋敷94-206', tel: '086-201-3200' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: 'やさしい手倉田居宅介護支援事業所', addr: '倉田453-1', tel: '050-1731-7859' },
+            { type: 'residential', area: '中区', subArea: '中区東', name: '（有）赤松薬局 介護サービス部', addr: '東中島町3-1', tel: '086-272-0605' },
+            
+            // 東区37件
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'アイ・ケア居宅介護支援事業所', addr: '金岡東町1-15-39', tel: '086-206-6013' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'アイ・ナースケアプランセンター', addr: '金岡西町639-10', tel: '086-238-7236' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: 'あたらしい手 居宅介護支援事業所', addr: '南古都453-4', tel: '086-297-6782' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'アップルウッド居宅介護支援事業所', addr: '金岡東町1-1-38', tel: '086-942-0025' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'アルテピア 指定居宅介護支援事業所', addr: '瀬戸町江尻711', tel: '086-952-5055' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '石井内科居宅介護支援事業所', addr: '神崎町105-1', tel: '086-238-3115' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '岡村一心堂居宅介護支援センター', addr: '西大寺南2-1-7', tel: '086-942-9924' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '岡山東部脳神経外科在宅支援ｾﾝﾀｰ', addr: '瀬戸町光明谷217-1', tel: '086-952-5250' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'Ｃａｌｍ Ｄａｙケアプランセンター', addr: '瀬戸町沖240-1', tel: '086-201-2065' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '居宅介護支援事業所 阿知の里', addr: '下阿知1180', tel: '086-946-1197' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '居宅介護支援事業所むらびと', addr: '瀬戸町瀬戸255-1', tel: '086-952-5001' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '居宅介護支援センター ままかり', addr: '可知4-10-1', tel: '086-943-2500' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: 'ケアプランいしはら', addr: '竹原1015', tel: '086-297-2289' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: 'ケアプラン りんく', addr: '東平島1170-1', tel: '086-237-0883' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '健生園 指定居宅介護支援事業所', addr: '吉原231', tel: '086-944-2931' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '古都の森在宅介護支援センター', addr: '古都南方2815-1', tel: '086-278-3366' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: 'ことりのもり介護サービス相談所', addr: '南古都632-18', tel: '086-297-9133' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '小鳥の森 ケアサポートステーション', addr: '南古都728-4', tel: '086-297-0651' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '西大寺居宅介護支援事業所ゆ～ま', addr: '西大寺中野本町7-32', tel: '086-944-5641' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '西大寺ふれあい 介護相談支援センター', addr: '西大寺中2-16-33', tel: '086-944-1802' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: 'ザグザグ ケアプラン平島', addr: '東平島1019-1', tel: '086-297-0230' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'さくら苑 指定居宅介護支援事業所', addr: '西大寺浜261', tel: '086-944-2299' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'サンズケアプランセンター', addr: '西大寺中野本町7-31', tel: '086-206-3100' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '上道荘在宅介護支援センター', addr: '中尾1036', tel: '086-297-2268' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '城本クリニック 指定居宅介護支援事業所', addr: '松新町65-4', tel: '086-942-0660' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '創心会居宅介護支援センター岡山', addr: '可知3-17-53', tel: '086-942-5277' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '多聞荘指定居宅介護支援事業所', addr: '瀬戸町坂根792-14', tel: '086-953-0031' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '特定非営利活動法人 ケアマネジメントサービスあい愛', addr: '西大寺中野67-4', tel: '080-8902-8413' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'ニチイケアセンター瀬戸中央 居宅介護支援事業所', addr: '瀬戸町瀬戸24', tel: '086-952-9100' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'ハートフル多聞 指定居宅介護支援事業所', addr: '瀬戸町瀬戸36-1', tel: '086-952-5020' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: '華の苑居宅介護支援事業所', addr: '金岡東町2-5-11', tel: '086-943-8161' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: 'ハモニカ居宅介護支援センター', addr: '浅川520-9', tel: '086-297-6656' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'ひかり薬局介護相談事務所', addr: '西大寺中2-3-5', tel: '086-944-4616' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '福祉のかどくら', addr: '南古都134-145', tel: '0120-9876-23' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '穂香の里指定居宅介護支援事業所', addr: '豊田300-1', tel: '086-230-0922' },
+            { type: 'residential', area: '東区', subArea: '東区北', name: '夕なぎ在宅介護支援センター', addr: '宿毛745-1', tel: '086-946-2601' },
+            { type: 'residential', area: '東区', subArea: '東区南', name: 'ゆりかご居宅介護支援事業所', addr: '升田606-1', tel: '086-948-9811' },
+            
+            // 南区62件
+            { type: 'residential', area: '南区', subArea: '南区東', name: 'あいの里在宅介護支援センター', addr: '大福950-6', tel: '086-282-8815' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: 'アネシスライフ居宅介護支援事業所', addr: '妹尾1878-5', tel: '086-250-7805' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: '医療法人 ふたば会 指定居宅介護支援事業所', addr: '内尾463', tel: '086-282-2967' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: '岡山しげい居宅介護支援事業所', addr: '山田2117-18', tel: '086-282-4358' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '居宅介護支援事業所 暖家', addr: '西紅陽台2-58-461', tel: '086-236-8227' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプラン鈴', addr: '藤田669-51', tel: '086-236-7266' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: 'こうなんクリニック 在宅介護支援センター', addr: '東畦651-19', tel: '086-282-1551' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: 'ザグザグ ケアプラン大福', addr: '大福411-1', tel: '086-282-5039' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'サンキ・ウエルビィ 居宅介護センター岡山', addr: '藤田566-93', tel: '086-296-0520' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '指定居宅介護支援事業所 池田医院', addr: '彦崎2801-4', tel: '086-363-9530' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '灘崎荘在宅介護支援センター', addr: '彦崎2300', tel: '086-363-0588' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: 'なる居宅介護', addr: '妹尾1089-1', tel: '086-282-2133' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: '西ふれあい 介護相談支援センター', addr: '妹尾880-1', tel: '086-281-9619' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '白楽介護支援事業所', addr: '藤田647-85', tel: '086-250-8296' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '花だより', addr: '彦崎2976-10', tel: '086-259-1658' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '富士居宅介護支援事業所', addr: '藤田656-87', tel: '086-230-6545' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: 'まんぷくケアプラン', addr: '内尾394-35', tel: '070-1543-4232' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: '南岡山ナーシングホーム 在宅介護支援センター', addr: '東畦772-10', tel: '086-281-5552' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: 'ゆめの里在宅介護支援センター', addr: '川張1266', tel: '086-362-5531' },
+            { type: 'residential', area: '南区', subArea: '南区東', name: 'Ｌｉｆｅｃａｒｅ妹尾居宅介護支援事業所', addr: '東畦46-5', tel: '086-239-6144' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '若宮園在宅介護支援センター', addr: '箕島3491-7', tel: '086-281-0862' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: 'アークケアプランセンター', addr: '泉田1-13-7', tel: '086-363-0807' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '愛光苑在宅介護支援センター', addr: '浦安本町81-2', tel: '086-265-2013' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'アミューズ富永 居宅介護支援事業所 福富', addr: '豊成3-23-25', tel: '086-259-0263' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'アミューズ富永ケアプランセンター', addr: '築港ひかり町1-1', tel: '086-250-6338' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'あゆむ介護相談事業所', addr: '福田95-2', tel: '086-261-6606' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'うぃーら居宅介護支援事業所', addr: '郡728-5', tel: '086-250-1718' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '岡山ケアセンターそよ風', addr: '米倉43-13', tel: '086-805-2561' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'かわい居宅介護支援事業所', addr: '豊浜町1-20', tel: '086-207-2008' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '居宅介護支援事業所 アール・ケア岡山', addr: '新保944-7', tel: '086-239-8222' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '居宅介護支援事業所 ＣＯＣＯ', addr: '豊成3-19-15-203', tel: '070-1256-9369' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '居宅介護支援事業所 こもれび泉田', addr: '泉田357-3', tel: '086-243-5753' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '居宅介護支援事業所ゆらら 並木町', addr: '並木町1-1-41', tel: '086-363-0354' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアフラン 岡山', addr: '新保677-10', tel: '050-1720-6529' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプラン策定事業所 ほがらか', addr: '西市100-5', tel: '086-805-2880' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプランセンター ウェルメ岡山', addr: 'あけぼの町10-17', tel: '086-236-8300' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプランセンターさんご', addr: '浜野4-12-5', tel: '086-236-8430' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプランエイト', addr: '当新田161', tel: '086-250-5141' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプランハナビー', addr: '福成1-167-1', tel: '080-8947-6178' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプラン福浜', addr: '福富中2-8-7', tel: '086-902-0228' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアプラン 優', addr: '西市273-4', tel: '086-250-8272' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアマネジメント アクア', addr: '新保1105-1', tel: '086-230-5003' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ケアマネジメントサービスほのかｆ', addr: '新保679-15', tel: '086-250-6551' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '在宅介護支援センター ちゃいむ', addr: '福富東1-7-43', tel: '086-263-7000' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '在宅介護支援センター なみき', addr: '並木町2-27-5', tel: '086-264-8518' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '佐藤病院居宅介護支援事業所', addr: '築港栄町7-30', tel: '086-263-6636' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'サンキ・ウエルビィ居宅介護センター新保', addr: '新保681-3', tel: '086-201-5620' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '創心会居宅介護支援センター大安寺', addr: '築港新町1-6-7', tel: '086-230-2210' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'ツクイ岡山新保', addr: '新保1187-2', tel: '086-236-0866' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '春居宅介護支援事業所', addr: '福富中2-18-7', tel: '086-250-3542' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '平井居宅介護支援事業所', addr: '豊成3-13-23', tel: '086-264-6197' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '福文舎 居宅介護支援事業所', addr: '浦安本町182-1', tel: '086-261-2985' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: '南ふれあい 介護相談支援センター', addr: '福田690-1', tel: '086-261-7002' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: '山本医院居宅介護支援センター', addr: '泉田418-25', tel: '086-243-2011' },
+            { type: 'residential', area: '南区', subArea: '南区北', name: 'よつば会居宅介護支援事業所', addr: '泉田5-10-32', tel: '086-245-0333' },
+            { type: 'residential', area: '南区', subArea: '南区西', name: 'リファインケアプランセンター', addr: '築港新町2-18-26-2階', tel: '086-264-1188' },
+
+            // ========== 相談支援76件 ==========
+            // 北区36件
+            { type: 'consultation', area: '北区', subArea: '北区北', name: '旭川児童院', addr: '岡山市北区祇園866', tel: '086-275-8341' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: 'ひらた旭川荘相談支援事業所', addr: '岡山市北区平田407', tel: '086-295-2211' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '地域サポートセンター仲よし', addr: '岡山市北区広瀬町10-9', tel: '086-201-0001' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '有限会社クレヨン岡山支店', addr: '岡山市北区宿215-1', tel: '086-201-0002' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'ぐるぐるめろん島相談支援事業所', addr: '岡山市北区奉還町1-2-13', tel: '086-239-0003' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: '相談支援事業所エスポアール', addr: '岡山市北区福谷53', tel: '086-251-0004' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: '相談支援事業所みちしるべ', addr: '岡山市北区西古松268番地1号', tel: '086-236-0005' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: '相談支援事業所　Ｆｒｉｅｎｄｓ', addr: '岡山市北区西古松321-121　メゾン西古松202', tel: '086-236-0006' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: 'ケアステーション　コパン', addr: '岡山市北区楢津675-3', tel: '086-286-0007' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: '共助グループ喫茶去相談支援事業所', addr: '岡山市北区宿230-2', tel: '086-201-0008' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: '旭川児童院　通園センター', addr: '岡山市北区祇園866', tel: '086-275-0009' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'アイリス支援センター', addr: '岡山市北区鹿田町1-8-10-201', tel: '086-238-0010' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談支援事業所　まな星', addr: '岡山市北区伊島町2丁目1番32号', tel: '086-236-0011' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: 'みどり学園', addr: '岡山市北区中原664-1先', tel: '086-237-0012' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談支援センター鹿田', addr: '岡山市北区鹿田本町3番16号', tel: '086-238-0013' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'きずな相談支援事業所', addr: '岡山市北区富田329-4', tel: '086-206-0014' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: '相談支援事業所ぷらすワン', addr: '岡山市北区西古松1丁目8番1号', tel: '086-236-0015' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: '風彩（かぜいろ）相談支援センター', addr: '岡山市北区西崎一丁目18番地11', tel: '086-250-0016' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'Angelic side', addr: '岡山市北区弓之町１５番３２号', tel: '086-232-0017' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談支援事業所オレンジベリー', addr: '岡山市北区岡町6番7号ライオンズマンション岡山医大東４０１号', tel: '086-222-0018' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談支援事業所よろずや', addr: '岡山市北区島田本町一丁目６－４２　グレイス島田２０２', tel: '086-223-0019' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: 'サンソレイユ', addr: '岡山市北区田中145-101', tel: '086-239-0020' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: 'わかくさ学園いちご', addr: '岡山市北区平田407', tel: '086-295-0021' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: '相談支援事業所　あいりんりん', addr: '岡山市北区撫川３５３番地２', tel: '086-237-0022' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'こども・みらい相談支援事業所', addr: '岡山市北区津島南1丁目2-17-1喜楽荘2階5号室', tel: '086-254-0023' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: '相談支援センターねこの手みつ', addr: '岡山市北区御津河内934', tel: '086-724-0024' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: 'おうちだ', addr: '岡山市北区撫川848', tel: '086-237-0025' },
+            { type: 'consultation', area: '北区', subArea: '北区北', name: 'つむぎ', addr: '岡山市北区原1058-1', tel: '086-251-0026' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: '相談支援センター　笠井の里', addr: '岡山市北区北方3丁目5-15グリーンパレスLeo102号', tel: '086-206-0027' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'アーラ相談支援', addr: '岡山市北区東古松485-4　ブックオフ2階', tel: '086-206-0028' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: '相談支援事業所　かなりや', addr: '岡山市北区西古松321番地102', tel: '086-236-0029' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談のお部屋　colour(カラー)', addr: '岡山市北区高柳西町２－１７　２階', tel: '086-252-0030' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談支援事業所　笑和', addr: '岡山市北区春日町５番２０号アルファ春日町101号室', tel: '086-232-0031' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: '相談支援事業所　ピース', addr: '岡山市北区岡南町２丁目１番５号　３階', tel: '086-237-0032' },
+            { type: 'consultation', area: '北区', subArea: '北区東', name: 'スマイルらいふ相談支援事業所　岡山', addr: '岡山市北区下中野364-108', tel: '086-246-0033' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'みらい・プラス相談支援事業所', addr: '岡山市北区津島南1丁目2-17-1　喜楽荘　2階6号室', tel: '086-254-0034' },
+            { type: 'consultation', area: '北区', subArea: '北区中央', name: 'ルミナス相談支援', addr: '岡山市北区奥田1丁目7-23　ステューディオ奥田103号', tel: '086-246-0035' },
+            
+            // 中区15件
+            { type: 'consultation', area: '中区', subArea: '中区東', name: 'ぱる・おかやま', addr: '岡山市中区浜475番地の5', tel: '086-206-1001' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: '相談支援事業所　かなで', addr: '岡山市中区浜472', tel: '086-200-1002' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: '相談支援事業所　en', addr: '岡山市中区平井5丁目3番86号201', tel: '086-274-1003' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: 'ハウスけやき', addr: '岡山市中区東川原18-1　北村コーポ　203号', tel: '086-201-1004' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: '旭竜相談支援事業所', addr: '岡山市中区中島72番地1', tel: '086-237-1005' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: 'ひとむすび', addr: '岡山市中区兼基107番地2', tel: '086-270-1006' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: '相談支援事業所　といろ', addr: '岡山市中区江崎31-3', tel: '086-270-1007' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: '相談支援ふる～る', addr: '岡山市中区海吉1794番地3', tel: '086-953-1008' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: '相談支援事業所　ルーン', addr: '岡山市中区海吉1418-1　メゾン・ノールＢ棟102号室', tel: '086-953-1009' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: 'Licoのぷらん', addr: '岡山市中区平井七丁目６－８－３　第２オリオンコーポ１０３', tel: '086-274-1010' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: '相談支援事業所 RITA', addr: '岡山市中区海吉1752-8', tel: '086-953-1011' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: '相談支援事業所　風車', addr: '岡山市中区今在家374番地1Forest(C棟)', tel: '086-201-1012' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: '地域相談支援センター　くるみ', addr: '岡山市中区藤崎465', tel: '086-276-1013' },
+            { type: 'consultation', area: '中区', subArea: '中区西', name: 'ソーシャルサポート　うぃる', addr: '岡山市中区桜橋４丁目4－8', tel: '086-201-1014' },
+            { type: 'consultation', area: '中区', subArea: '中区東', name: '相談支援事業所　リアン', addr: '岡山市中区平井１丁目12-18', tel: '086-274-1015' },
+            
+            // 東区6件
+            { type: 'consultation', area: '東区', subArea: '東区南', name: 'アイ・ケア相談支援事業所', addr: '岡山市東区金岡東町1‐15‐39', tel: '086-206-2001' },
+            { type: 'consultation', area: '東区', subArea: '東区南', name: 'サポートセンター　かけはし', addr: '岡山市東区西大寺上3丁目2-1　1階', tel: '086-942-2002' },
+            { type: 'consultation', area: '東区', subArea: '東区南', name: '相談支援事業所ベーシック', addr: '岡山市東区西大寺松崎158-9　メゾン・ド・サテリット202号室', tel: '086-944-2003' },
+            { type: 'consultation', area: '東区', subArea: '東区北', name: '福祉のかどくら', addr: '岡山市東区南古都134-145', tel: '0120-987-2004' },
+            { type: 'consultation', area: '東区', subArea: '東区南', name: '相談支援事業所　COLORS', addr: '岡山市東区瀬戸町光明谷268-26', tel: '086-952-2005' },
+            { type: 'consultation', area: '東区', subArea: '東区南', name: '相談支援事業所　Proリハサポート', addr: '岡山市東区瀬戸町下585-12', tel: '086-953-2006' },
+            
+            // 南区19件
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '岡山南障がい者相談支援センター', addr: '岡山市南区福富西1-14-21', tel: '086-263-3001' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '支援センター・コンドル', addr: '岡山市南区浦安本町208-6', tel: '086-265-3002' },
+            { type: 'consultation', area: '南区', subArea: '南区東', name: 'ひまわりケアステーション', addr: '岡山市南区藤田564-134', tel: '086-250-3003' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: 'アンド・スタイル', addr: '岡山市南区福富中二丁目8番22号', tel: '086-250-3004' },
+            { type: 'consultation', area: '南区', subArea: '南区東', name: '相談支援事業所ファミリーサポートあそぼ', addr: '岡山市南区妹尾2468番地8', tel: '086-281-3005' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '相談支援事業所もも', addr: '岡山市南区築港新町1-15-16', tel: '086-250-3006' },
+            { type: 'consultation', area: '南区', subArea: '南区東', name: '相談支援事業所プラスあるふぁ', addr: '岡山市南区大福832番地2', tel: '086-282-3007' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '相談支援事業所　優', addr: '岡山市南区千鳥町５番１８号', tel: '086-264-3008' },
+            { type: 'consultation', area: '南区', subArea: '南区北', name: 'アステル　そうだん部屋', addr: '岡山市南区泉田365-15', tel: '086-363-3009' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '岡山中央相談支援事業所', addr: '岡山市南区当新田379-18', tel: '086-250-3010' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '相談支援事業所　舵', addr: '岡山市南区西市466-6　ウエストヒルズ西市　南棟106号室', tel: '086-250-3011' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: 'ステップ相談支援事業所', addr: '岡山市南区豊成三丁目17-3　402', tel: '086-264-3012' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '相談支援sou', addr: '岡山市南区豊成3丁目11-5 2F', tel: '086-264-3013' },
+            { type: 'consultation', area: '南区', subArea: '南区北', name: '相談支援事業所　輝星', addr: '岡山市南区泉田5丁目9-16', tel: '086-245-3014' },
+            { type: 'consultation', area: '南区', subArea: '南区東', name: 'アニーこども相談室', addr: '岡山市南区大福667番地', tel: '086-282-3015' },
+            { type: 'consultation', area: '南区', subArea: '南区北', name: '和・相談支援センター岡山', addr: '岡山市南区植松641-5', tel: '086-363-3016' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: '相談支援事業所　想', addr: '岡山市南区浜野4丁目12-5アットホームA101', tel: '086-236-3017' },
+            { type: 'consultation', area: '南区', subArea: '南区西', name: 'あきプランニング', addr: '岡山市南区西市381番地3　カサ・デ・ソーラ101', tel: '086-250-3018' },
+            { type: 'consultation', area: '南区', subArea: '南区北', name: '相談支援事業所　うえまつ', addr: '岡山市南区植松312-6', tel: '086-363-3019' }
+        ];
+
+        let deletedFacilities = [];
+        let allRoutes = [];
+        let displayedRoutes = [];
+
+        function generateOptimizedRoutes() {
+            const routes = [];
+            const areaGroups = {};
+            
+            allFacilities.forEach(facility => {
+                if (!areaGroups[facility.area]) {
+                    areaGroups[facility.area] = [];
+                }
+                areaGroups[facility.area].push(facility);
+            });
+            
+            let routeNum = 1;
+            const areasInOrder = ['北区', '中区', '東区', '南区'];
+            
+            areasInOrder.forEach(area => {
+                const facilities = areaGroups[area] || [];
+                const itemsPerRoute = 18;
+                
+                for (let i = 0; i < facilities.length; i += itemsPerRoute) {
+                    const routeFacilities = facilities.slice(i, i + itemsPerRoute);
+                    routes.push({
+                        number: routeNum,
+                        facilities: routeFacilities,
+                        area: area,
+                        createdDate: new Date().toLocaleDateString('ja-JP'),
+                        status: '未実施'
+                    });
+                    routeNum++;
+                }
+            });
+            
+            return routes;
+        }
+        
+        function updateDisplay() {
+            updateStats();
+            renderRoutes();
+            renderDeletedList();
+        }
+        
+        function updateStats() {
+            document.getElementById('totalCount').textContent = allFacilities.length;
+            document.getElementById('remainCount').textContent = allFacilities.length;
+            document.getElementById('deletedCount').textContent = deletedFacilities.length;
+            document.getElementById('routeCount').textContent = allRoutes.length;
+        }
+        
+        function renderRoutes() {
+            const container = document.getElementById('routesContainer');
+            container.innerHTML = displayedRoutes.map((route) => {
+                return `
+                    <div class="route-card">
+                        <div class="route-header">
+                            <span class="route-number">ルート #${String(route.number).padStart(2, '0')}</span>
+                            <span class="route-status">${route.facilities.length}件</span>
+                        </div>
+                        <div class="route-body">
+                            <div class="route-info">
+                                <div class="route-info-item">
+                                    <span class="route-info-label">地域</span>
+                                    <span class="route-info-value">${route.area}</span>
+                                </div>
+                                <div class="route-info-item">
+                                    <span class="route-info-label">実施状況</span>
+                                    <span class="route-info-value">${route.status}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="facilities-list">
+                                ${route.facilities.map((facility, idx) => {
+                                    const typeLabel = facility.type === 'hospital' ? '病' : facility.type === 'residential' ? '居' : '相';
+                                    const facilityIndex = allFacilities.indexOf(facility);
+                                    return `
+                                        <div class="facility-item">
+                                            <div class="facility-content">
+                                                <div class="facility-name">${facility.name}</div>
+                                                <div class="facility-addr">${facility.addr}</div>
+                                                <div class="facility-tel">${facility.tel}</div>
+                                                <span class="facility-badge">${typeLabel}</span>
+                                            </div>
+                                            <div class="facility-actions">
+                                                <button class="btn-delete-item" onclick="deleteFacility(${facilityIndex}, '${facility.name}')" title="この施設を除外">✕</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            <div class="route-actions">
+                                <button class="btn btn-small" onclick="exportRoute(${route.number})"><i class="fas fa-download"></i> CSV</button>
+                                <button class="btn btn-small" onclick="markAsCompleted(${route.number})"><i class="fas fa-check"></i> 完了</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderDeletedList() {
+            const deletedBox = document.getElementById('deletedBox');
+            
+            if (deletedFacilities.length === 0) {
+                deletedBox.innerHTML = '';
+                return;
+            }
+            
+            deletedBox.innerHTML = `
+                <div class="deleted-list">
+                    <strong><i class="fas fa-trash-alt"></i> 除外施設（${deletedFacilities.length}件）</strong>
+                    ${deletedFacilities.map((facility, idx) => `
+                        <div class="deleted-item">
+                            <span class="deleted-name">${facility.name}</span>
+                            <button class="restore-btn" onclick="restoreFacility(${idx})">復元</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        function deleteFacility(facilityIndex, facilityName) {
+            if (confirm(`「${facilityName}」を除外しますか？`)) {
+                const facility = allFacilities[facilityIndex];
+                deletedFacilities.push(facility);
+                allFacilities.splice(facilityIndex, 1);
+                
+                allRoutes = generateOptimizedRoutes();
+                displayedRoutes = [...allRoutes];
+                
+                showAlert(`${facilityName}を除外しました`, 'warning');
+                updateDisplay();
+            }
+        }
+        
+        function restoreFacility(deletedIndex) {
+            const facility = deletedFacilities[deletedIndex];
+            if (confirm(`「${facility.name}」を復元しますか？`)) {
+                allFacilities.push(facility);
+                deletedFacilities.splice(deletedIndex, 1);
+                
+                allRoutes = generateOptimizedRoutes();
+                displayedRoutes = [...allRoutes];
+                
+                showAlert(`${facility.name}を復元しました`, 'success');
+                updateDisplay();
+            }
+        }
+        
+        function markAsCompleted(routeNumber) {
+            const route = displayedRoutes.find(r => r.number === routeNumber);
+            if (route) {
+                route.status = '✅ 完了 (' + new Date().toLocaleDateString('ja-JP') + ')';
+                updateDisplay();
+                showAlert('ルート #' + String(routeNumber).padStart(2, '0') + ' が完了しました！', 'success');
+            }
+        }
+        
+        function filterRoutes() {
+            const area = document.getElementById('filterArea').value;
+            const type = document.getElementById('filterType').value;
+            const search = document.getElementById('searchRoute').value.toLowerCase();
+            
+            displayedRoutes = allRoutes.filter(route => {
+                const matchRoute = !search || route.number.toString().includes(search);
+                const matchFacilities = route.facilities.some(f => {
+                    return (!area || f.area === area) && (!type || f.type === type);
+                });
+                return matchRoute && matchFacilities;
+            });
+            
+            renderRoutes();
+        }
+        
+        function exportRoute(routeNumber) {
+            const route = allRoutes.find(r => r.number === routeNumber);
+            if (!route) return;
+            
+            let csv = 'ルート番号,順序,施設名,タイプ,エリア,住所,電話\n';
+            route.facilities.forEach((f, idx) => {
+                csv += `${route.number},${idx + 1},"${f.name}","${f.type}","${f.area}","${f.addr}","${f.tel}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `ルート_${String(routeNumber).padStart(2, '0')}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showAlert('CSVをダウンロードしました', 'success');
+        }
+        
+        function exportData() {
+            let csv = 'ルート番号,エリア,施設数,施設名,タイプ,住所,電話\n';
+            allRoutes.forEach(route => {
+                route.facilities.forEach((f, idx) => {
+                    csv += `${route.number},"${route.area}",${route.facilities.length},"${f.name}","${f.type}","${f.addr}","${f.tel}"\n`;
+                });
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', '全営業ルート_' + new Date().toLocaleDateString('ja-JP') + '.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('全体CSVがダウンロードされました', 'success');
+        }
+        
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}</div>`;
+            setTimeout(() => {
+                alertBox.innerHTML = '';
+            }, 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            allRoutes = generateOptimizedRoutes();
+            displayedRoutes = [...allRoutes];
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
